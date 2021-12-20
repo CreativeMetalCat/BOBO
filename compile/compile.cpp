@@ -433,60 +433,6 @@ public:
 				res.push_back((addr & 0xff00) >> 8);
 			}
 		}
-		else if (name == "eq_sum")
-		{
-			/*
-			lda varaddr
-			mov b,a
-			lda var2addr
-			add b
-			sta var3 addr*/
-			//addr1 = a
-			//addr2 = b
-			//addr 3 = c
-			// c = a+b
-			if (Variable* var1 = varManager->Get(arguments[0]))
-			{
-				unsigned short addr1 = var1->promisedOffset + 0x850;
-
-				res.push_back(0x3a);
-				res.push_back(addr1 & 0x00ff);
-				res.push_back((addr1 & 0xff00) >> 1);
-
-				if (Variable* var2 = varManager->Get(arguments[1]))
-				{
-					unsigned short addr2 = var2->promisedOffset + 0x850;
-					res.push_back(0x47);
-
-					res.push_back(0x3a);
-					res.push_back(addr2 & 0x00ff);
-					res.push_back((addr2 & 0xff00) >> 1);
-
-					res.push_back(0x80);
-					if (Variable* var3 = varManager->Get(arguments[2]))
-					{
-						unsigned short addr3 = var3->promisedOffset + 0x850;
-						res.push_back(0x32);
-						res.push_back(addr3 & 0x00ff);
-						res.push_back((addr3 & 0xff00) >> 1);
-					}
-					else
-					{
-						throw CompilationErrorException("Error! Refenced variable: " + arguments[2] + " does not exist in code");
-					}
-				}
-				else
-				{
-					throw CompilationErrorException("Error! Refenced variable: " + arguments[1] + " does not exist in code");
-				}
-			}
-			else
-			{
-				throw CompilationErrorException("Error! Refenced variable: " + arguments[0] + " does not exist in code");
-			}
-
-
-		}
 		return res;
 	}
 };
@@ -506,54 +452,6 @@ std::vector<std::string> Split(std::string& str, char separator)
 	{
 		res.push_back(item);
 	}
-	return res;
-}
-
-std::vector<std::string> ProcessOperationS(std::vector<std::string>& operators, std::string& program, bool& finished)
-{
-	finished = false;
-	std::vector<std::string> res = {};
-	//look for operators in the string
-	size_t operatorStart = NPOS;
-	//find any operator
-	for (int i = 0; i < operators.size(); i++)
-	{
-		operatorStart = program.find_first_of(operators[i], 0);
-		if (operatorStart != NPOS)
-		{
-			//found operation
-
-			//process left hand argument
-			//note that for "=" left argument must be a variable
-			std::string arg1 = program.substr(0, operatorStart);
-			std::vector<std::string> proc1 = ProcessOperationS(operators, arg1, finished);
-			if (proc1.empty())
-			{
-				res.push_back(arg1);
-			}
-			else
-			{
-				res.insert(res.end(), proc1.begin(), proc1.end());
-			}
-			//process right hand argument
-			//seek till end of the line(maybe add support for divding via ";" in the future?) 
-			//Equal But Against Less(EBAL)
-			std::string arg2 = program.substr(operatorStart + 1);
-			//arg2 will have to go though the same operation as this 
-			//so recursion
-			std::vector<std::string> proc2 = ProcessOperationS(operators, arg2, finished);
-			if (proc2.empty())
-			{
-				res.push_back(arg2);
-			}
-			else
-			{
-				res.insert(res.end(), proc2.begin(), proc2.end());
-			}
-			int i = 0;
-		}
-	}
-	finished = true;
 	return res;
 }
 
@@ -609,55 +507,6 @@ std::vector<Operation*> ProcessOperation(std::vector<std::string>& operators, st
 	//no operations found - the operation higher on the tree will just add the whole string as argument
 	return {};
 }
-
-#ifdef OLD_PROC_OPER
-std::vector<Operation*> ProcessOperationA(std::vector<std::string>& operators, std::string& program, VariableManager*& manager)
-{
-	std::vector<Operation*> res = {};
-	//look for operators in the string
-	size_t operatorStart = NPOS;
-	//find any operator
-	for (int i = 0; i < operators.size(); i++)
-	{
-		operatorStart = program.find_first_of(operators[i], 0);
-		if (operatorStart != NPOS)
-		{
-			//found operation
-			std::vector<std::string> args = {};
-			//process left hand argument
-			//note that for "=" left argument must be a variable
-			std::string arg1 = program.substr(0, operatorStart);
-			std::vector<Operation*> proc1 = ProcessOperation(operators, arg1, manager);
-			if (proc1.empty())
-			{
-				args.push_back(arg1);
-			}
-			else
-			{
-				res.insert(res.end(), proc1.begin(), proc1.end());
-			}
-			//process right hand argument
-			//seek till end of the line(maybe add support for divding via ";" in the future?) 
-			//Equal But Against Less(EBAL)
-			std::string arg2 = program.substr(operatorStart + 1);
-			//arg2 will have to go though the same operation as this 
-			//so recursion
-			std::vector<Operation*> proc2 = ProcessOperation(operators, arg2, manager);
-			if (proc2.empty())
-			{
-				args.push_back(arg2);
-			}
-			else
-			{
-				res.insert(res.end(), proc2.begin(), proc2.end());
-			}
-
-			res.push_back(new Operation(operators[i], args, manager));
-		}
-	}
-	return res;
-}
-#endif // OLD_PROC_OPER
 
 int main(int argc, char* argv[])
 {
