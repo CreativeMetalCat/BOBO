@@ -437,9 +437,6 @@ public:
 	}
 };
 
-
-
-
 std::vector<std::string> Split(std::string& str, char separator)
 {
 	//reslt vector 
@@ -613,11 +610,12 @@ int main(int argc, char* argv[])
 				operations.insert(operations.end(), proc1.begin(), proc1.end());
 				int bd = 0;
 			}
-			for (Operation* op : operations)
-			{
-				std::vector<uchar> code = op->Compile();
-				result_code.insert(result_code.end(), code.begin(), code.end());
-			}
+			
+		}
+		for (Operation* op : operations)
+		{
+			std::vector<uchar> code = op->Compile();
+			result_code.insert(result_code.end(), code.begin(), code.end());
 		}
 		std::ofstream result_file;
 		result_file.open("./out.cod");
