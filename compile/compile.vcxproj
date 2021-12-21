@@ -117,6 +117,7 @@
       <PreprocessorDefinitions>_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp20</LanguageStandard>
+      <ExceptionHandling>Sync</ExceptionHandling>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -132,6 +133,7 @@
       <PreprocessorDefinitions>NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp20</LanguageStandard>
+      <ExceptionHandling>Sync</ExceptionHandling>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -142,6 +144,17 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="compile.cpp" />
+    <ClCompile Include="ErrorHandling\Exceptions.cpp" />
+    <ClCompile Include="Operation.cpp" />
+    <ClCompile Include="Variable.cpp" />
+    <ClCompile Include="VariableManager.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="ErrorHandling\Exceptions.h" />
+    <ClInclude Include="Operation.h" />
+    <ClInclude Include="Types.h" />
+    <ClInclude Include="Variable.h" />
+    <ClInclude Include="VariableManager.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
