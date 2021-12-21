@@ -84,6 +84,7 @@ std::vector<Operation*> ProcessOperation(std::vector<std::string>& operators, st
 	return {};
 }
 
+
 std::vector<uchar> Operation::Compile()
 
 {
@@ -102,7 +103,7 @@ std::vector<uchar> Operation::Compile()
 
 		if (Variable* var = varManager->Get(arguments[1]))
 		{
-			unsigned short addr = (var->promisedOffset + 0x850);
+			unsigned short addr = (var->promisedOffset + 0x800 + varManager->program_lenght);
 			res.push_back(0x3a);
 
 			res.push_back(addr & 0x00ff);
@@ -233,7 +234,7 @@ std::vector<uchar> Operation::Compile()
 			}
 			else if (Variable* var = varManager->Get(arguments[1]))
 			{
-				unsigned short addr = (var->promisedOffset + 0x850);
+				unsigned short addr = (var->promisedOffset +  + 0x800 + varManager->program_lenght);
 				//lxi h,
 				res.push_back(0x21);
 
@@ -282,7 +283,7 @@ std::vector<uchar> Operation::Compile()
 			}
 			else if (Variable* var = varManager->Get(arguments[0]))
 			{
-				unsigned short addr = (var->promisedOffset + 0x850);
+				unsigned short addr = (var->promisedOffset +  + 0x800 + varManager->program_lenght);
 				//lxi h,
 				res.push_back(0x21);
 
@@ -334,7 +335,7 @@ std::vector<uchar> Operation::Compile()
 				}
 				else if (Variable* var = varManager->Get(arguments[0]))
 				{
-					unsigned short addr = (var->promisedOffset + 0x850);
+					unsigned short addr = (var->promisedOffset +  + 0x800 + varManager->program_lenght);
 
 					//lda
 					res.push_back(0x3a);
@@ -354,7 +355,7 @@ std::vector<uchar> Operation::Compile()
 				}
 				else if (Variable* var = varManager->Get(arguments[1]))
 				{
-					unsigned short addr = (var->promisedOffset + 0x850);
+					unsigned short addr = (var->promisedOffset +  + 0x800 + varManager->program_lenght);
 					//lxi h,
 					res.push_back(0x21);
 
@@ -393,11 +394,140 @@ std::vector<uchar> Operation::Compile()
 		}
 		if (Variable* var = varManager->Get(arguments[0]))
 		{
-			unsigned short addr = (var->promisedOffset + 0x850);
+			unsigned short addr = (var->promisedOffset +  + 0x800 + varManager->program_lenght);
 			res.push_back(0x32);
 
 			res.push_back(addr & 0x00ff);
 			res.push_back((addr & 0xff00) >> 8);
+		}
+		//if it's variable defenition + initialization 
+		else if (arguments[0].find("var") != NPOS)
+		{
+			/*
+			* for offset we would need to know program lenght before compilation
+			*/
+
+			//declare variable and then use it
+			varManager->AddNew(arguments[0].substr(arguments[0].find("var"), 3), Variable::Type::Byte);
+			unsigned short addr = (varManager->variables[varManager->variables.size() - 1]->promisedOffset +  + 0x800 + varManager->program_lenght);
+			res.push_back(0x32);
+
+			res.push_back(addr & 0x00ff);
+			res.push_back((addr & 0xff00) >> 8);
+		}
+	}
+	return res;
+}
+
+size_t Operation::GetLenght()
+{
+
+	size_t res = 0u;
+	if (name == "wr")
+	{
+		if (Variable* var = varManager->Get(arguments[1]))
+		{
+			res += 3u;
+		}
+		else
+		{
+			res += 2u;
+		}
+	}
+	else if (name == "+")
+	{
+		size_t arg1_name_start = arguments[0].find('&');
+		size_t arg2_name_start = arguments[1].find('&');
+
+		bool is_arg1_number = arguments[0].find_first_not_of("1234567890") == NPOS;
+		bool is_arg2_number = arguments[1].find_first_not_of("1234567890") == NPOS;
+
+		//both are registers(or numbers)
+		if (arg1_name_start != NPOS && arg2_name_start != NPOS)
+		{
+			res += 3u;
+		}
+		//is the second argument variable?
+		else if (arg1_name_start != NPOS && arg2_name_start == NPOS)
+		{
+			res += 2u;
+			if (is_arg2_number)
+			{
+				res += 2u;
+			}
+			else 
+			{
+				res += 3u;
+			}		
+		}
+		//is the first argument variable
+		else if (arg1_name_start == NPOS && arg2_name_start != NPOS)
+		{
+			res += 2u;
+			if (is_arg1_number)
+			{
+				res += 2u;
+			}
+			else
+			{
+				res += 3u;
+			}
+		}
+		//are both variables(or could be just numbers)
+		else
+		{
+			//if both are numbers, just calculate before hand, who cares
+			if (is_arg1_number && is_arg2_number)
+			{
+				res += 2u;
+			}
+			else
+			{
+				if (is_arg1_number)
+				{
+					res += 2u;
+				}
+				else 
+				{
+					res += 3u;
+				}
+
+				if (is_arg2_number)
+				{
+					res += 2u;
+				}
+				else
+				{
+					res += 4u;
+				}
+
+			}
+		}
+	}
+	else if (name == "=")
+	{
+		//unlike math operations this one is very simple
+		//sta and that's it
+		//sta
+
+		//if only numbers, then prepare them
+		if (arguments[1].find_first_not_of("1234567890") == NPOS)
+		{
+			res += 2u;
+		}
+		//if result of something, prepare that too
+		else if (arguments[1].find("&") != NPOS)
+		{
+			res += 1u;
+		}
+		if (Variable* var = varManager->Get(arguments[0]))
+		{
+			res += 3u;
+		}
+		//if it's variable defenition + initialization 
+		else if (arguments[0].find("var") != NPOS)
+		{
+			res += 3u;
 		}
 	}
 	return res;

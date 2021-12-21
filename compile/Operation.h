@@ -18,6 +18,8 @@ public:
 		:name(name), arguments(arguments), varManager(varManager) {}
 
 	std::vector<uchar> Compile();
+
+	size_t GetLenght();
 };
 
 std::vector<Operation*> ProcessOperation(std::vector<std::string>& operators, std::string& program, VariableManager*& manager, std::string resultRegistryName);

@@ -38,7 +38,7 @@ int main(int argc, char* argv[])
 		std::cout << argv[i] << std::endl;
 	}
 
-	std::vector<std::string> program_full = { "var c = 2","b = 3","a = c + b + b" };
+	std::vector<std::string> program_full = { "var c = 2","var b = 3","var a = 5" };
 	//std::string program = "c = 2";
 
 	/*List of allowed tokens*/
@@ -74,29 +74,30 @@ int main(int argc, char* argv[])
 	//for that we would need a table of allowed operands
 	//then we would simply split based on that
 	
-	try
-	{
-		VariableManager* manager = new VariableManager();
+	/*try
+	{*/
+		
 		std::vector<Operation*>operations = {};
+		VariableManager* manager = new VariableManager();
 		std::vector<uchar> result_code = {};
 
 		for (std::string program : program_full)
-		{//prepare string for processing
-			program.erase(std::remove_if(program.begin(), program.end(), std::isspace), program.end());
+		{
+			//prepare string for processing
+			program.erase(std::remove_if(program.begin(), program.end(), ::isspace), program.end());
 
 			//turn all of them to lowercase
 			std::transform(program.begin(), program.end(), program.begin(),
 				[](uchar c) { return std::tolower(c); }
 			);
 
-			//PURELY FOR TESTING, REMOVE THIS BEFORE RELEASE YOU MORON!
-			manager->AddNew("a", Variable::Type::Byte);
-			manager->AddNew("b", Variable::Type::Byte);
-			manager->AddNew("c", Variable::Type::Byte);
+			
+
+			/*Because of different syntax for math operations and function execution*/
 
 			//explicitly seek write to registry/memory operations
 			//first find opening expression
-			if (program.find_first_of(tokens[0]) != NPOS)
+			if (program.find(tokens[0]) != NPOS)
 			{
 				std::cout << "found func Name: " << tokens[0] << std::endl;
 				//it's a function
@@ -128,16 +129,20 @@ int main(int argc, char* argv[])
 						result_code.insert(result_code.end(), vec.begin(), vec.end());
 					});
 			}
+			//else process math and variable defenition(because they use = as base of operation)
 			else
 			{
-				bool b = 0;
-
 				std::vector<Operation*> proc1 = ProcessOperation(operators, program, manager, "&a");
 				operations.insert(operations.end(), proc1.begin(), proc1.end());
-				int bd = 0;
 			}
 			
 		}
+		for (Operation* op : operations)
+		{
+			manager->program_lenght += op->GetLenght();
+		}
+		manager->program_lenght += 1u;
+		//first get program lenght(for variables),because name of the thing doesn't matter we can just return lenght
 		for (Operation* op : operations)
 		{
 			std::vector<uchar> code = op->Compile();
@@ -151,7 +156,7 @@ int main(int argc, char* argv[])
 		}
 		result_file.close();
 		
-	}
+	/* }
 	catch(ParsingErrorException e)
 	{
 		std::cout << e.what();
@@ -161,7 +166,7 @@ int main(int argc, char* argv[])
 	{
 		std::cout << e.what();
 		exit(2);
-	}
+	}*/
 
 	//now to compile
 	
