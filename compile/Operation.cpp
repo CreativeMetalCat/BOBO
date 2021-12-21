@@ -408,7 +408,7 @@ std::vector<uchar> Operation::Compile()
 			*/
 
 			//declare variable and then use it
-			varManager->AddNew(arguments[0].substr(arguments[0].find("var"), 3), Variable::Type::Byte);
+			varManager->AddNew(arguments[0].substr(arguments[0].find("var") + 3), Variable::Type::Byte);
 			unsigned short addr = (varManager->variables[varManager->variables.size() - 1]->promisedOffset +  + 0x800 + varManager->program_lenght);
 			res.push_back(0x32);
 

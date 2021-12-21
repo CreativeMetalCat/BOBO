@@ -38,7 +38,7 @@ int main(int argc, char* argv[])
 		std::cout << argv[i] << std::endl;
 	}
 
-	std::vector<std::string> program_full = { "var c = 2","var b = 3","var a = 5" };
+	std::vector<std::string> program_full = { "var c = 2","var b = c + 89 + c ","var a = b + b + 20 + 56" };
 	//std::string program = "c = 2";
 
 	/*List of allowed tokens*/
