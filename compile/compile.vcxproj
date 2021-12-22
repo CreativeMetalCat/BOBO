@@ -145,12 +145,14 @@
   <ItemGroup>
     <ClCompile Include="compile.cpp" />
     <ClCompile Include="ErrorHandling\Exceptions.cpp" />
+    <ClCompile Include="ErrorHandling\Logger.cpp" />
     <ClCompile Include="Operation.cpp" />
     <ClCompile Include="Variable.cpp" />
     <ClCompile Include="VariableManager.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="ErrorHandling\Exceptions.h" />
+    <ClInclude Include="ErrorHandling\Logger.h" />
     <ClInclude Include="Operation.h" />
     <ClInclude Include="Types.h" />
     <ClInclude Include="Variable.h" />
