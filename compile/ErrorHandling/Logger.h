@@ -1,23 +1,18 @@
 #pragma once
-#include <string>
-#include <vector>
 #include <iostream>
 
-class Logger
+/*Define this to use default std::cout*/
+#define LOG_STD_OUT
+
+
+#ifdef LOG_STD_OUT
+namespace Logger
 {
-public:
-	std::vector<std::string> Errors = {};
-	
-	std::vector<std::string> Warnings = {};
+	void PrintError(std::string text, int line = -1);
 
-	std::vector<std::string> Info = {};
+	void PrintInfo(std::string text, int line = -1);
 
-	void Log()
-	{
-		for (std::string error : Errors)
-		{
-			std::cout << "\033[32m" << "Error" << error.c_str() << "\033[0m" << std::endl;
-		}
-	}
-};
+	void PrintWarning(std::string text, int line = -1);
 
+}
+#endif //LOG_STD_OUT

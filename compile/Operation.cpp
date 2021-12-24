@@ -1,4 +1,5 @@
 #include "Operation.h"
+#include "ErrorHandling/Logger.h"
 
 uchar SwitchBasedOnRegistry(char regName, uchar base, uchar offset, bool returnARegValue)
 
@@ -97,7 +98,7 @@ std::vector<uchar> Operation::Compile()
 	{
 		if (arguments.size() != 2)
 		{
-			throw CompilationErrorException("Invalid number of arguments passed for function WR!");
+			Logger::PrintError("Invalid number of arguments passed for function WR!");
 		}
 
 
@@ -155,7 +156,7 @@ std::vector<uchar> Operation::Compile()
 			}
 			else
 			{
-				throw CompilationErrorException("Error function WR expects a,b,c,d,e,h,l as first argument,but got " + arguments[0]);
+				Logger::PrintError("Function WR expects a,b,c,d,e,h,l as first argument,but got " + arguments[0] + " isntead");
 			}
 			res.push_back(base);
 
@@ -247,7 +248,7 @@ std::vector<uchar> Operation::Compile()
 			}
 			else
 			{
-				throw CompilationErrorException("Error! Attempted to use undefined variable: " + arguments[1]);
+				Logger::PrintError("Attempted to use undefined variable: " + arguments[1]);
 			}
 
 			//move result to desired registry for futher use
@@ -296,7 +297,8 @@ std::vector<uchar> Operation::Compile()
 			}
 			else
 			{
-				throw CompilationErrorException("Error! Attempted to use undefined variable: " + arguments[0]);
+				
+				Logger::PrintError(" Attempted to use undefined variable: " + arguments[0]);
 			}
 			//move result to desired registry for futher use
 			res.push_back(SwitchBasedOnRegistry(arguments[2][arg1_name_start + 1], 0x78, 0x01));
@@ -345,7 +347,7 @@ std::vector<uchar> Operation::Compile()
 				}
 				else
 				{
-					throw CompilationErrorException("Error! Attempted to use undefined variable: " + arguments[0]);
+					Logger::PrintError(" Attempted to use undefined variable: " + arguments[0]);
 				}
 
 				if (is_arg2_number)
@@ -368,7 +370,7 @@ std::vector<uchar> Operation::Compile()
 				}
 				else
 				{
-					throw CompilationErrorException("Error! Attempted to use undefined variable: " + arguments[1]);
+					Logger::PrintError(" Attempted to use undefined variable: " + arguments[1]);
 				}
 
 			}
