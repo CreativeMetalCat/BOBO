@@ -226,7 +226,7 @@ int main(int argc, char* argv[])
 		result_code.insert(result_code.end(), code.begin(), code.end());
 	}
 	std::ofstream result_file;
-	result_file.open("./out.cod");
+	result_file.open("./out.cod",std::ios::binary);
 	for (uchar byte : result_code)
 	{
 		result_file << byte;

@@ -395,9 +395,36 @@ std::vector<uchar> Operation::Compile(size_t currentProgramLenght)
 			res.push_back(SwitchBasedOnRegistry(arguments[1][arguments[1].find("&") + 1], 0x78, 0x01, true));
 		}
 		//if that's an array
-		else if ((arguments[1].find('[') != NPOS && arguments[1].find(']') != NPOS) || (arguments[1].find('(') != NPOS && arguments[1].find(')') != NPOS))
+		else if ((arguments[1][0] == '[' && arguments[1].find(']') != NPOS) || (arguments[1][0] == '(' && arguments[1].find(')') != NPOS))
 		{
 			is_array = true;
+		}
+		//if this refers to element of array
+		else if (arguments[1].find('[', 1) != NPOS)
+		{
+			if (Variable* array = varManager->Get(arguments[1].substr((0, arguments[1].find(']') - 1))))
+			{
+				unsigned short addr = array->GetElementAddress(atoi(arguments[1].substr(
+					(
+						arguments[1].find('[') + 1,
+						arguments[1].find(']') - 1
+						)
+				).c_str()
+				));
+				//sta addr
+				//lda newaddr
+				res.push_back(0x3a);
+				res.push_back(addr & 0x00ff);
+				res.push_back((addr & 0xff00) >> 8);
+			}
+		}
+		else if (Variable* var = varManager->Get(arguments[1]))
+		{
+			unsigned short addr = (var->promisedOffset + +0x800 + varManager->program_lenght);
+			//lda newaddr
+			res.push_back(0x3a);
+			res.push_back(addr & 0x00ff);
+			res.push_back((addr & 0xff00) >> 8);
 		}
 		else
 		{
@@ -435,7 +462,7 @@ std::vector<uchar> Operation::Compile(size_t currentProgramLenght)
 			*/
 			if (is_array)
 			{
-				if (arguments[1].find('[') != NPOS && arguments[1].find(']') != NPOS)
+				if (arguments[1][0] == '[' && arguments[1].find(']') != NPOS)
 				{
 					size_t off = 0;
 					while ((off = arguments[1].find(',', off + 1)) != NPOS)
@@ -459,7 +486,7 @@ std::vector<uchar> Operation::Compile(size_t currentProgramLenght)
 					res.push_back(std::stoi(arguments[1].substr(off + 1u, arguments[1].size() - off - 2)));
 
 				}
-				else if (arguments[1].find('(') != NPOS && arguments[1].find(')') != NPOS)
+				else if (arguments[1][0] == '[' && arguments[1].find(')') != NPOS)
 				{
 					array_size = stoi(arguments[1].substr(arguments[1].find('(') + 1, arguments[1].find(',') - 1));
 					uchar elem = stoi(arguments[1].substr(arguments[1].find(',') + 1, arguments[1].find(')') - 1));
@@ -514,7 +541,7 @@ std::vector<uchar> Operation::Compile(size_t currentProgramLenght)
 					res.push_back((cur_addr & 0xff00) >> 8);
 				}
 				varManager->variables[varManager->variables.size() - 1]->ArraySize = array_size;
-				if (is_array && array_size <= 0)
+				if (is_array && (array_size <= 0 || array_size > 255))
 				{
 					Logger::PrintError("Attempted to declare array of size " + std::to_string(array_size));
 					Logger::PrintInfo("To declare array use [x1,x2,...,xn] or (size,default_value) syntax");
