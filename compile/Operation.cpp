@@ -86,7 +86,7 @@ std::vector<Operation*> ProcessOperation(std::vector<std::string>& operators, st
 }
 
 
-std::vector<uchar> Operation::Compile()
+std::vector<uchar> Operation::Compile(size_t currentProgramLenght)
 
 {
 	std::vector<uchar> res;
@@ -381,7 +381,7 @@ std::vector<uchar> Operation::Compile()
 		//unlike math operations this one is very simple
 		//sta and that's it
 		//sta
-
+		bool is_array = false;
 		//if only numbers, then prepare them
 		if (arguments[1].find_first_not_of("1234567890") == NPOS)
 		{
@@ -392,10 +392,26 @@ std::vector<uchar> Operation::Compile()
 		else if (arguments[1].find("&") != NPOS)
 		{
 			//move to a
-			res.push_back(SwitchBasedOnRegistry(arguments[0][arguments[1].find("&") + 1], 0x78, 0x01, true));
+			res.push_back(SwitchBasedOnRegistry(arguments[1][arguments[1].find("&") + 1], 0x78, 0x01, true));
 		}
+		//if that's an array
+		else if ((arguments[1].find('[') != NPOS && arguments[1].find(']') != NPOS) || (arguments[1].find('(') != NPOS && arguments[1].find(')') != NPOS))
+		{
+			is_array = true;
+		}
+		else
+		{
+			Logger::PrintError("Expected variable name,array defenition or number, got \"" + arguments[1]+"\"");
+		}
+
+
 		if (Variable* var = varManager->Get(arguments[0]))
 		{
+			if (var->IsArray != is_array)
+			{
+				Logger::PrintError(std::string("Type mismatch! Attempted to assign ") + (is_array ? "array" : "value") + " to " + (var->IsArray ? "array" : "value"));
+				return res;
+			}
 			unsigned short addr = (var->promisedOffset +  + 0x800 + varManager->program_lenght);
 			res.push_back(0x32);
 
@@ -405,17 +421,102 @@ std::vector<uchar> Operation::Compile()
 		//if it's variable defenition + initialization 
 		else if (arguments[0].find("var") != NPOS)
 		{
+			//declare variable and then use it
+			varManager->AddNew(arguments[0].substr(arguments[0].find("var") + 3), Variable::Type::Byte, is_array);
+			unsigned short addr = (varManager->variables[varManager->variables.size() - 1]->promisedOffset + 0x800 + varManager->program_lenght);
 			/*
 			* for offset we would need to know program lenght before compilation
 			*/
+			int32_t array_size = 0;
+			uchar* array = nullptr;
+			/*to find array size we perform one of two operations based on conditions
+			* 1) If using [x1,x2,...,xn] syntax -> count how many elements we have
+			* 2) if useing (x,y) syntax -> do as it says
+			*/
+			if (is_array)
+			{
+				if (arguments[1].find('[') != NPOS && arguments[1].find(']') != NPOS)
+				{
+					size_t off = 0;
+					while ((off = arguments[1].find(',', off)) != NPOS)
+					{
+						array_size++;
+					}
+					array = new uchar[array_size];
+					
+				}
+				else if (arguments[1].find('(') != NPOS && arguments[1].find(')') != NPOS)
+				{
+					array_size = stoi(arguments[1].substr(arguments[1].find('(') + 1, arguments[1].find(',') - 1));
+					uchar elem = stoi(arguments[1].substr(arguments[1].find(',') + 1, arguments[1].find(')') - 1));
 
-			//declare variable and then use it
-			varManager->AddNew(arguments[0].substr(arguments[0].find("var") + 3), Variable::Type::Byte);
-			unsigned short addr = (varManager->variables[varManager->variables.size() - 1]->promisedOffset +  + 0x800 + varManager->program_lenght);
-			res.push_back(0x32);
+					/*
+						__asm
+						{
+								lxi h, 0900
+								mvi b, 10
+								lxi d, 0000
+							loop:
+								mvi m, 01
+								inx h
+								inx d
+								mov a, d
+								cmp b
+								jnz loop
+							hlt
+						}*/
 
-			res.push_back(addr & 0x00ff);
-			res.push_back((addr & 0xff00) >> 8);
+					//lxi h,addr
+					res.push_back(0x21);
+					res.push_back(addr & 0x00ff);
+					res.push_back((addr & 0xff00) >> 8);
+
+					//mvi b,arr_len
+					res.push_back(0x06);
+					res.push_back((uchar)array_size);
+
+					//lxi d,0000
+					res.push_back(0x11);
+					res.push_back(0);
+					res.push_back(0);
+
+					//mvi m,var
+					res.push_back(0x36);
+					res.push_back(elem);
+
+					//inx h
+					res.push_back(0x23);
+
+					//inx d
+					res.push_back(0x13);
+					//mov a,e
+					res.push_back(0x7b);
+					//cmp b
+					res.push_back(0xb8);
+					//jnz current - 8
+					res.push_back(0xc2);
+					unsigned short cur_addr = currentProgramLenght + 8u + 0x800;
+					res.push_back(cur_addr & 0x00ff);
+					res.push_back((cur_addr & 0xff00) >> 8);
+				}
+				varManager->variables[varManager->variables.size() - 1]->ArraySize = array_size;
+				if (is_array && array_size <= 0)
+				{
+					Logger::PrintError("Attempted to declare array of size " + std::to_string(array_size));
+					Logger::PrintInfo("To declare array use [x1,x2,...,xn] or (size,default_value) syntax");
+					return res;
+				}
+			}
+			else
+			{
+				res.push_back(0x32);
+				res.push_back(addr & 0x00ff);
+				res.push_back((addr & 0xff00) >> 8);
+			}
+		}
+		else
+		{
+			Logger::PrintError("Expected variable name or number, got \"" + arguments[0] + "\"");
 		}
 	}
 	else if (name == "main_end")
@@ -533,7 +634,24 @@ size_t Operation::GetLenght()
 		//if it's variable defenition + initialization 
 		else if (arguments[0].find("var") != NPOS)
 		{
-			res += 3u;
+			int32_t array_size = 0;
+			if (arguments[1].find('[') != NPOS && arguments[1].find(']') != NPOS)
+			{
+				size_t off = 0;
+				while ((off = arguments[1].find(',', off)) != NPOS)
+				{
+					res += 5;
+				}
+			}
+			else if (arguments[1].find('(') != NPOS && arguments[1].find(')') != NPOS)
+			{
+				res += 16u;
+			}
+
+			else
+			{
+				res += 3u;
+			}
 		}
 	}
 	else if (name == "main_end")

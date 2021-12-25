@@ -61,7 +61,9 @@ int main(int argc, char* argv[])
 				{
 					program_full.push_back("");
 					std::getline(input, program_full[program_full.size() - 1]);
+#ifdef _DEBUG
 					Logger::Print(program_full[program_full.size() - 1]);
+#endif // _DEBUG
 				}
 				input.close();
 			}
@@ -220,7 +222,7 @@ int main(int argc, char* argv[])
 	//first get program lenght(for variables),because name of the thing doesn't matter we can just return lenght
 	for (Operation* op : operations)
 	{
-		std::vector<uchar> code = op->Compile();
+		std::vector<uchar> code = op->Compile(result_code.size());
 		result_code.insert(result_code.end(), code.begin(), code.end());
 	}
 	std::ofstream result_file;

@@ -1,8 +1,5 @@
 def main
-	#array size is inferred based on element count
-	var arr = [2,3,4,5,6,7,8,9,10]
-
-	#or by using this style that will tell compiler to make 
-	#array of size 10 filled with "01"
-	var arr2 = (10,1)
+	
+	
+	var arr2 = (100,1)
 end
