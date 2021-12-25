@@ -1,0 +1,5 @@
+def main
+var c  = 2
+var b = 89 + c
+var a = b + b + 76
+end

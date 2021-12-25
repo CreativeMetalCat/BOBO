@@ -14,5 +14,7 @@ namespace Logger
 
 	void PrintWarning(std::string text, int line = -1);
 
+	void Print(std::string text);
+
 }
 #endif //LOG_STD_OUT

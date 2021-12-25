@@ -418,6 +418,10 @@ std::vector<uchar> Operation::Compile()
 			res.push_back((addr & 0xff00) >> 8);
 		}
 	}
+	else if (name == "main_end")
+	{
+		res.push_back(0x76);
+	}
 	return res;
 }
 
@@ -457,10 +461,10 @@ size_t Operation::GetLenght()
 			{
 				res += 2u;
 			}
-			else 
+			else
 			{
 				res += 3u;
-			}		
+			}
 		}
 		//is the first argument variable
 		else if (arg1_name_start == NPOS && arg2_name_start != NPOS)
@@ -489,7 +493,7 @@ size_t Operation::GetLenght()
 				{
 					res += 2u;
 				}
-				else 
+				else
 				{
 					res += 3u;
 				}
@@ -531,6 +535,10 @@ size_t Operation::GetLenght()
 		{
 			res += 3u;
 		}
+	}
+	else if (name == "main_end")
+	{
+		res += 1u;
 	}
 	return res;
 }
