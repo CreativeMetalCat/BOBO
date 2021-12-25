@@ -159,6 +159,12 @@ int main(int argc, char* argv[])
 			[](uchar c) { return std::tolower(c); }
 		);
 
+		//for now any string that has comment symbol(#) is treated like comment
+		//in future make it stop processing the string if # is found
+		if ((*it).find('#') != NPOS)
+		{
+			continue;
+		}
 
 
 		/*Because of different syntax for math operations and function execution*/
