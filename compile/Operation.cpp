@@ -438,12 +438,26 @@ std::vector<uchar> Operation::Compile(size_t currentProgramLenght)
 				if (arguments[1].find('[') != NPOS && arguments[1].find(']') != NPOS)
 				{
 					size_t off = 0;
-					while ((off = arguments[1].find(',', off)) != NPOS)
+					while ((off = arguments[1].find(',', off + 1)) != NPOS)
 					{
 						array_size++;
 					}
-					array = new uchar[array_size];
-					
+					size_t temp = 0;
+
+					res.push_back(0x21);
+					res.push_back(addr & 0x00ff);
+					res.push_back((addr & 0xff00) >> 8);
+					off = 0;
+					while ((temp = arguments[1].find(',', off+ 1)) != NPOS)
+					{
+						res.push_back(0x36);
+						res.push_back(std::stoi(arguments[1].substr(off + 1u, temp)));
+						res.push_back(0x23);
+						off = temp;
+					}
+					res.push_back(0x36);
+					res.push_back(std::stoi(arguments[1].substr(off + 1u, arguments[1].size() - off - 2)));
+
 				}
 				else if (arguments[1].find('(') != NPOS && arguments[1].find(')') != NPOS)
 				{
@@ -637,11 +651,13 @@ size_t Operation::GetLenght()
 			int32_t array_size = 0;
 			if (arguments[1].find('[') != NPOS && arguments[1].find(']') != NPOS)
 			{
+				res += 3;
 				size_t off = 0;
-				while ((off = arguments[1].find(',', off)) != NPOS)
+				while ((off = arguments[1].find(',', off + 1)) != NPOS)
 				{
-					res += 5;
+					res += 3;
 				}
+				res += 2;
 			}
 			else if (arguments[1].find('(') != NPOS && arguments[1].find(')') != NPOS)
 			{
