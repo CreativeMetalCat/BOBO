@@ -8,6 +8,12 @@ uchar SwitchBasedOnRegistry(char regName, uchar base, uchar offset = 0x01, bool 
 
 class Operation
 {
+private:
+	/**Adds bytes for address element based on array index value
+	*@param: operationByte What byte  to put in front of adress bytes*/
+	 bool read_array_variable_addr(std::string arg, std::vector<uchar>& res,uchar operationByte = 0x3a);
+
+	 bool read_variable_addr(std::string arg, std::vector<uchar>& res, uchar operationByte);
 public:
 	std::string name;
 	std::vector<std::string> arguments;

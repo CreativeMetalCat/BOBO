@@ -86,6 +86,54 @@ std::vector<Operation*> ProcessOperation(std::vector<std::string>& operators, st
 }
 
 
+bool Operation::read_array_variable_addr(std::string arg,std::vector<uchar> &res, uchar operationByte)
+{
+	if (arg.find('[', 1) != NPOS)
+	{
+		std::string name = arg.substr(0, arg.find(']') - 2);
+		if (varManager->Exists(name))
+		{
+			std::unique_ptr<Variable>& array = varManager->Get(name);
+			//convert value hidden between [ and ] to number
+			unsigned short addr = array->GetElementAddress(stoi(arg.substr(
+				(
+					arg.find('[') + 1,
+					arg.find(']') - 1
+					)
+			)));
+			//sta addr
+			//lda newaddr
+			res.push_back(operationByte);
+			res.push_back(addr & 0x00ff);
+			res.push_back((addr & 0xff00) >> 8);
+
+			return true;
+		}
+		else
+		{
+			Logger::PrintError("Attempted to use undefined variable \"" + name + "\"");
+		}
+	}
+	return false;
+}
+
+bool Operation::read_variable_addr(std::string arg, std::vector<uchar>& res, uchar operationByte)
+{
+	if (varManager->Exists(arg))
+	{
+		std::unique_ptr<Variable>& var = varManager->Get(arg);
+		unsigned short addr = (var->promisedOffset + +0x800 + varManager->program_lenght);
+		
+		res.push_back(operationByte);
+
+		//addr
+		res.push_back(addr & 0x00ff);
+		res.push_back((addr & 0xff00) >> 8);
+		return true;
+	}
+	return false;
+}
+
 std::vector<uchar> Operation::Compile(size_t currentProgramLenght)
 
 {
@@ -233,17 +281,8 @@ std::vector<uchar> Operation::Compile(size_t currentProgramLenght)
 				res.push_back(0xc6);
 				res.push_back((uchar)std::stoi(arguments[1]));
 			}
-			else if (varManager->Exists(arguments[1]))
+			else if (read_variable_addr(arguments[1],res,0x21/*lxi h,*/))
 			{
-				std::unique_ptr<Variable>& var = varManager->Get(arguments[1]);
-				unsigned short addr = (var->promisedOffset +  + 0x800 + varManager->program_lenght);
-				//lxi h,
-				res.push_back(0x21);
-
-				//addr
-				res.push_back(addr & 0x00ff);
-				res.push_back((addr & 0xff00) >> 8);
-
 				//add m
 				res.push_back(0x86);
 			}
@@ -283,17 +322,8 @@ std::vector<uchar> Operation::Compile(size_t currentProgramLenght)
 				res.push_back(0xc6);
 				res.push_back((uchar)std::stoi(arguments[0]));
 			}
-			else if (varManager->Exists(arguments[0]))
+			else if (read_variable_addr(arguments[0], res, 0x21/*lxi h,*/))
 			{
-				std::unique_ptr<Variable>& var = varManager->Get(arguments[0]);
-				unsigned short addr = (var->promisedOffset +  + 0x800 + varManager->program_lenght);
-				//lxi h,
-				res.push_back(0x21);
-
-				//addr
-				res.push_back(addr & 0x00ff);
-				res.push_back((addr & 0xff00) >> 8);
-
 				//add m
 				res.push_back(0x86);
 			}
@@ -337,19 +367,12 @@ std::vector<uchar> Operation::Compile(size_t currentProgramLenght)
 					res.push_back(0x3e);
 					res.push_back((uchar)std::stoi(arguments[0]));
 				}
-				else if (varManager->Exists(arguments[0]))
+				else if (read_variable_addr(arguments[1], res, 0x3a/*lda*/))
 				{
-					std::unique_ptr<Variable>& var = varManager->Get(arguments[0]);
-
-					unsigned short addr = (var->promisedOffset +  + 0x800 + varManager->program_lenght);
-
-					//lda
-					res.push_back(0x3a);
-					//addr
-					res.push_back(addr & 0x00ff);
-					res.push_back((addr & 0xff00) >> 8);
+					//idk there was restuctruing so this is empty now
 				}
-				else
+				//if it fails to read as array -> throw compilation error
+				else if (!read_array_variable_addr(arguments[0],res))
 				{
 					Logger::PrintError(" Attempted to use undefined variable: " + arguments[0]);
 				}
@@ -359,17 +382,14 @@ std::vector<uchar> Operation::Compile(size_t currentProgramLenght)
 					res.push_back(0xc6);
 					res.push_back((uchar)std::stoi(arguments[1]));
 				}
-				else if (varManager->Exists(arguments[1]))
+				else if(read_variable_addr(arguments[1], res, 0x21/*lxi h,*/))
 				{
-					std::unique_ptr<Variable>& var = varManager->Get(arguments[1]);
-					unsigned short addr = (var->promisedOffset +  + 0x800 + varManager->program_lenght);
-					//lxi h,
-					res.push_back(0x21);
-
-					//addr
-					res.push_back(addr & 0x00ff);
-					res.push_back((addr & 0xff00) >> 8);
-
+					//add m
+					res.push_back(0x86);
+				}
+				//if it fails to read as array -> throw compilation error
+				else if (read_array_variable_addr(arguments[1], res, 0x21))
+				{
 					//add m
 					res.push_back(0x86);
 				}
@@ -407,69 +427,15 @@ std::vector<uchar> Operation::Compile(size_t currentProgramLenght)
 		}
 		//find "[" on any position expect for the first one
 		//if search is successful that means we have access to array element by index
-		else if (arguments[1].find('[', 1) != NPOS)
+
+		
+		if (!read_array_variable_addr(arguments[1], res, 0x3a) && !read_variable_addr(arguments[1], res, 0x3a))
 		{
-			std::string name = arguments[1].substr((0, arguments[1].find(']') - 1));
-			if (varManager->Exists(name))
-			{
-				std::unique_ptr<Variable>& array = varManager->Get(name);
-				//convert value hidden between [ and ] to number
-				unsigned short addr = array->GetElementAddress(stoi(arguments[1].substr(
-					(
-						arguments[1].find('[') + 1,
-						arguments[1].find(']') - 1
-					)
-				)));
-				//sta addr
-				//lda newaddr
-				res.push_back(0x3a);
-				res.push_back(addr & 0x00ff);
-				res.push_back((addr & 0xff00) >> 8);
-			}
-			else
-			{
-				Logger::PrintError("Attempted to use undefined variable \"" + arguments[1].substr((0, arguments[1].find(']') - 1)) + "\"");
-			}
-		}
-		else if (varManager->Exists(arguments[1]))
-		{
-			std::unique_ptr<Variable>& var = varManager->Get(arguments[1]);
-			unsigned short addr = (var->promisedOffset + +0x800 + varManager->program_lenght);
-			//lda newaddr
-			res.push_back(0x3a);
-			res.push_back(addr & 0x00ff);
-			res.push_back((addr & 0xff00) >> 8);
-		}
-		else
-		{
-			Logger::PrintError("Expected variable name,array defenition or number, got \"" + arguments[1]+"\"");
+			Logger::PrintError("Expected variable name,array defenition or number, got \"" + arguments[1] + "\"");
 		}
 
-		if (arguments[0].find('[', 1) != NPOS)
-		{
-			std::string name = arguments[0].substr(0, arguments[0].find('['));
-			if (varManager->Exists(name))
-			{
-				std::unique_ptr<Variable>& array = varManager->Get(name);
-				//convert value hidden between [ and ] to number
-				unsigned short addr = array->GetElementAddress(stoi(arguments[0].substr(
-					(
-						arguments[0].find('[') + 1,
-						arguments[0].find(']') - 1
-						)
-				)));
-				//sta addr
-				//lda newaddr
-				res.push_back(0x32);
-				res.push_back(addr & 0x00ff);
-				res.push_back((addr & 0xff00) >> 8);
-			}
-			else
-			{
-				Logger::PrintError("Attempted to use undefined variable \"" + name + "\"");
-			}
-		}
-		else if (varManager->Exists(arguments[0]))
+		
+		if (varManager->Exists(arguments[0]))
 		{
 			std::unique_ptr<Variable>& var = varManager->Get(arguments[0]);
 			if (var->IsArray != is_array)
@@ -593,7 +559,7 @@ std::vector<uchar> Operation::Compile(size_t currentProgramLenght)
 				res.push_back((addr & 0xff00) >> 8);
 			}
 		}
-		else
+		else if(!read_array_variable_addr(arguments[0], res, 0x3a))
 		{
 			Logger::PrintError("Expected variable name or number, got \"" + arguments[0] + "\"");
 		}
