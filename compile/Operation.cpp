@@ -394,28 +394,34 @@ std::vector<uchar> Operation::Compile(size_t currentProgramLenght)
 			//move to a
 			res.push_back(SwitchBasedOnRegistry(arguments[1][arguments[1].find("&") + 1], 0x78, 0x01, true));
 		}
-		//if that's an array
+		//check if it's any array defenition
+		//this is used later for actual array initialisation procedure
 		else if ((arguments[1][0] == '[' && arguments[1].find(']') != NPOS) || (arguments[1][0] == '(' && arguments[1].find(')') != NPOS))
 		{
 			is_array = true;
 		}
-		//if this refers to element of array
+		//find "[" on any position expect for the first one
+		//if search is successful that means we have access to array element by index
 		else if (arguments[1].find('[', 1) != NPOS)
 		{
 			if (Variable* array = varManager->Get(arguments[1].substr((0, arguments[1].find(']') - 1))))
 			{
-				unsigned short addr = array->GetElementAddress(atoi(arguments[1].substr(
+				//convert value hidden between [ and ] to number
+				unsigned short addr = array->GetElementAddress(stoi(arguments[1].substr(
 					(
 						arguments[1].find('[') + 1,
 						arguments[1].find(']') - 1
-						)
-				).c_str()
-				));
+					)
+				)));
 				//sta addr
 				//lda newaddr
 				res.push_back(0x3a);
 				res.push_back(addr & 0x00ff);
 				res.push_back((addr & 0xff00) >> 8);
+			}
+			else
+			{
+				Logger::PrintError("Attempted to use undefined variable \"" + arguments[1].substr((0, arguments[1].find(']') - 1)) + "\"");
 			}
 		}
 		else if (Variable* var = varManager->Get(arguments[1]))
@@ -431,8 +437,29 @@ std::vector<uchar> Operation::Compile(size_t currentProgramLenght)
 			Logger::PrintError("Expected variable name,array defenition or number, got \"" + arguments[1]+"\"");
 		}
 
-
-		if (Variable* var = varManager->Get(arguments[0]))
+		if (arguments[0].find('[', 1) != NPOS)
+		{
+			if (Variable* array = varManager->Get(arguments[0].substr(0, arguments[0].find('['))))
+			{
+				//convert value hidden between [ and ] to number
+				unsigned short addr = array->GetElementAddress(stoi(arguments[0].substr(
+					(
+						arguments[0].find('[') + 1,
+						arguments[0].find(']') - 1
+						)
+				)));
+				//sta addr
+				//lda newaddr
+				res.push_back(0x32);
+				res.push_back(addr & 0x00ff);
+				res.push_back((addr & 0xff00) >> 8);
+			}
+			else
+			{
+				Logger::PrintError("Attempted to use undefined variable \"" + arguments[0].substr(0, arguments[0].find('[')) + "\"");
+			}
+		}
+		else if (Variable* var = varManager->Get(arguments[0]))
 		{
 			if (var->IsArray != is_array)
 			{
@@ -486,7 +513,7 @@ std::vector<uchar> Operation::Compile(size_t currentProgramLenght)
 					res.push_back(std::stoi(arguments[1].substr(off + 1u, arguments[1].size() - off - 2)));
 
 				}
-				else if (arguments[1][0] == '[' && arguments[1].find(')') != NPOS)
+				else if (arguments[1][0] == '(' && arguments[1].find(')') != NPOS)
 				{
 					array_size = stoi(arguments[1].substr(arguments[1].find('(') + 1, arguments[1].find(',') - 1));
 					uchar elem = stoi(arguments[1].substr(arguments[1].find(',') + 1, arguments[1].find(')') - 1));
@@ -668,6 +695,7 @@ size_t Operation::GetLenght()
 		{
 			res += 1u;
 		}
+		
 		if (Variable* var = varManager->Get(arguments[0]))
 		{
 			res += 3u;
@@ -676,7 +704,7 @@ size_t Operation::GetLenght()
 		else if (arguments[0].find("var") != NPOS)
 		{
 			int32_t array_size = 0;
-			if (arguments[1].find('[') != NPOS && arguments[1].find(']') != NPOS)
+			if (arguments[1][0] == '[' != NPOS && arguments[1].find(']') != NPOS)
 			{
 				res += 3;
 				size_t off = 0;
@@ -686,11 +714,19 @@ size_t Operation::GetLenght()
 				}
 				res += 2;
 			}
-			else if (arguments[1].find('(') != NPOS && arguments[1].find(')') != NPOS)
+			else if (arguments[1][0] == '(' != NPOS && arguments[1].find(')') != NPOS)
 			{
 				res += 16u;
 			}
-
+			else if (arguments[1].find('[') != NPOS)
+			{
+				res += 3u;
+			}
+			else if (Variable* var = varManager->Get(arguments[1]))
+			{
+				res += 3u;
+			}
+			
 			else
 			{
 				res += 3u;

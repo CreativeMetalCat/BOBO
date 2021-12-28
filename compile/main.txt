@@ -1,4 +1,5 @@
 def main
-	var b = 2
-	var a = b
+	var arr = (5,9)
+	var b = 80
+	arr[2] = 3 + b
 end
