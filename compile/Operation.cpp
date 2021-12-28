@@ -39,7 +39,7 @@ std::vector<Operation*> ProcessOperation(std::vector<std::string>& operators, st
 	//look for operators in the string
 	size_t operatorStart = NPOS;
 	//find any operator
-	for (int i = 0; i < operators.size(); i++)
+	for (size_t i = 0; i < operators.size(); i++)
 	{
 		operatorStart = program.find_first_of(operators[i], 0);
 		if (operatorStart != NPOS)
@@ -102,7 +102,7 @@ std::vector<uchar> Operation::Compile(size_t currentProgramLenght)
 		}
 
 
-		if (Variable* var = varManager->Get(arguments[1]))
+		if (std::unique_ptr<Variable> &var = varManager->Get(arguments[1]))
 		{
 			unsigned short addr = (var->promisedOffset + 0x800 + varManager->program_lenght);
 			res.push_back(0x3a);
@@ -233,8 +233,9 @@ std::vector<uchar> Operation::Compile(size_t currentProgramLenght)
 				res.push_back(0xc6);
 				res.push_back((uchar)std::stoi(arguments[1]));
 			}
-			else if (Variable* var = varManager->Get(arguments[1]))
+			else if (varManager->Exists(arguments[1]))
 			{
+				std::unique_ptr<Variable>& var = varManager->Get(arguments[1]);
 				unsigned short addr = (var->promisedOffset +  + 0x800 + varManager->program_lenght);
 				//lxi h,
 				res.push_back(0x21);
@@ -282,8 +283,9 @@ std::vector<uchar> Operation::Compile(size_t currentProgramLenght)
 				res.push_back(0xc6);
 				res.push_back((uchar)std::stoi(arguments[0]));
 			}
-			else if (Variable* var = varManager->Get(arguments[0]))
+			else if (varManager->Exists(arguments[0]))
 			{
+				std::unique_ptr<Variable>& var = varManager->Get(arguments[0]);
 				unsigned short addr = (var->promisedOffset +  + 0x800 + varManager->program_lenght);
 				//lxi h,
 				res.push_back(0x21);
@@ -335,8 +337,10 @@ std::vector<uchar> Operation::Compile(size_t currentProgramLenght)
 					res.push_back(0x3e);
 					res.push_back((uchar)std::stoi(arguments[0]));
 				}
-				else if (Variable* var = varManager->Get(arguments[0]))
+				else if (varManager->Exists(arguments[0]))
 				{
+					std::unique_ptr<Variable>& var = varManager->Get(arguments[0]);
+
 					unsigned short addr = (var->promisedOffset +  + 0x800 + varManager->program_lenght);
 
 					//lda
@@ -355,8 +359,9 @@ std::vector<uchar> Operation::Compile(size_t currentProgramLenght)
 					res.push_back(0xc6);
 					res.push_back((uchar)std::stoi(arguments[1]));
 				}
-				else if (Variable* var = varManager->Get(arguments[1]))
+				else if (varManager->Exists(arguments[1]))
 				{
+					std::unique_ptr<Variable>& var = varManager->Get(arguments[1]);
 					unsigned short addr = (var->promisedOffset +  + 0x800 + varManager->program_lenght);
 					//lxi h,
 					res.push_back(0x21);
@@ -404,8 +409,10 @@ std::vector<uchar> Operation::Compile(size_t currentProgramLenght)
 		//if search is successful that means we have access to array element by index
 		else if (arguments[1].find('[', 1) != NPOS)
 		{
-			if (Variable* array = varManager->Get(arguments[1].substr((0, arguments[1].find(']') - 1))))
+			std::string name = arguments[1].substr((0, arguments[1].find(']') - 1));
+			if (varManager->Exists(name))
 			{
+				std::unique_ptr<Variable>& array = varManager->Get(name);
 				//convert value hidden between [ and ] to number
 				unsigned short addr = array->GetElementAddress(stoi(arguments[1].substr(
 					(
@@ -424,8 +431,9 @@ std::vector<uchar> Operation::Compile(size_t currentProgramLenght)
 				Logger::PrintError("Attempted to use undefined variable \"" + arguments[1].substr((0, arguments[1].find(']') - 1)) + "\"");
 			}
 		}
-		else if (Variable* var = varManager->Get(arguments[1]))
+		else if (varManager->Exists(arguments[1]))
 		{
+			std::unique_ptr<Variable>& var = varManager->Get(arguments[1]);
 			unsigned short addr = (var->promisedOffset + +0x800 + varManager->program_lenght);
 			//lda newaddr
 			res.push_back(0x3a);
@@ -439,8 +447,10 @@ std::vector<uchar> Operation::Compile(size_t currentProgramLenght)
 
 		if (arguments[0].find('[', 1) != NPOS)
 		{
-			if (Variable* array = varManager->Get(arguments[0].substr(0, arguments[0].find('['))))
+			std::string name = arguments[0].substr(0, arguments[0].find('['));
+			if (varManager->Exists(name))
 			{
+				std::unique_ptr<Variable>& array = varManager->Get(name);
 				//convert value hidden between [ and ] to number
 				unsigned short addr = array->GetElementAddress(stoi(arguments[0].substr(
 					(
@@ -456,11 +466,12 @@ std::vector<uchar> Operation::Compile(size_t currentProgramLenght)
 			}
 			else
 			{
-				Logger::PrintError("Attempted to use undefined variable \"" + arguments[0].substr(0, arguments[0].find('[')) + "\"");
+				Logger::PrintError("Attempted to use undefined variable \"" + name + "\"");
 			}
 		}
-		else if (Variable* var = varManager->Get(arguments[0]))
+		else if (varManager->Exists(arguments[0]))
 		{
+			std::unique_ptr<Variable>& var = varManager->Get(arguments[0]);
 			if (var->IsArray != is_array)
 			{
 				Logger::PrintError(std::string("Type mismatch! Attempted to assign ") + (is_array ? "array" : "value") + " to " + (var->IsArray ? "array" : "value"));
@@ -600,7 +611,7 @@ size_t Operation::GetLenght()
 	size_t res = 0u;
 	if (name == "wr")
 	{
-		if (Variable* var = varManager->Get(arguments[1]))
+		if (varManager->Exists(arguments[1]))
 		{
 			res += 3u;
 		}
@@ -696,7 +707,7 @@ size_t Operation::GetLenght()
 			res += 1u;
 		}
 		
-		if (Variable* var = varManager->Get(arguments[0]))
+		if (varManager->Exists(arguments[0]))
 		{
 			res += 3u;
 		}
@@ -704,7 +715,7 @@ size_t Operation::GetLenght()
 		else if (arguments[0].find("var") != NPOS)
 		{
 			int32_t array_size = 0;
-			if (arguments[1][0] == '[' != NPOS && arguments[1].find(']') != NPOS)
+			if (arguments[1][0] == '['&& arguments[1].find(']') != NPOS)
 			{
 				res += 3;
 				size_t off = 0;
@@ -714,7 +725,7 @@ size_t Operation::GetLenght()
 				}
 				res += 2;
 			}
-			else if (arguments[1][0] == '(' != NPOS && arguments[1].find(')') != NPOS)
+			else if (arguments[1][0] == '('  && arguments[1].find(')') != NPOS)
 			{
 				res += 16u;
 			}
@@ -722,7 +733,7 @@ size_t Operation::GetLenght()
 			{
 				res += 3u;
 			}
-			else if (Variable* var = varManager->Get(arguments[1]))
+			else if (varManager->Exists(arguments[1]))
 			{
 				res += 3u;
 			}

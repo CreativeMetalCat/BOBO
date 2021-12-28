@@ -20,3 +20,9 @@ class CompilationErrorException : public std::exception
 public:
 	CompilationErrorException(std::string msg) : std::exception(msg.c_str()) {}
 };
+
+class VariableNotFoundException : public std::exception
+{
+public:
+	VariableNotFoundException(): std::exception() {}
+};

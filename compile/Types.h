@@ -4,6 +4,7 @@
 
 
 #include <string>
+#include <memory>
 
 #define NPOS std::string::npos
 
